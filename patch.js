@@ -1,67 +1,100 @@
 // ============================================================
-// 记忆表格远程导入补丁
+// 记忆表格远程导入补丁（基于官方API）
 // ============================================================
 
-function getPluginBaseUrl() {
-    // 1. 优先从已加载的脚本标签中查找
-    const scripts = document.querySelectorAll('script[src]');
-    for (const script of scripts) {
-        const src = script.src;
-        if (src.includes('st-memory-enhancement') && /\.js$/.test(src)) {
-            const match = src.match(/^(.*\/)[^/]+\.js/);
-            if (match) {
-                console.log('[补丁] ✅ 通过脚本标签找到插件路径:', match[1]);
-                return match[1];
-            }
+(async function main() {
+    console.log('[补丁] 脚本已加载，等待APP_READY...');
+
+    // 等待酒馆核心就绪
+    const appReady = new Promise(resolve => {
+        if (typeof SillyTavern !== 'undefined' && SillyTavern.eventSource) {
+            SillyTavern.eventSource.once('app_ready', resolve);
+        } else {
+            // 如果SillyTavern尚未定义，轮询检查
+            const check = setInterval(() => {
+                if (typeof SillyTavern !== 'undefined' && SillyTavern.eventSource) {
+                    clearInterval(check);
+                    SillyTavern.eventSource.once('app_ready', resolve);
+                }
+            }, 300);
         }
-    }
+    });
+    await appReady;
 
-    // 2. 如果脚本标签找不到，回退到固定路径
-    const origin = window.location.origin;
-    const fallbackPaths = [
-        origin + '/data/default-user/extensions/st-memory-enhancement/',
-        origin + '/public/scripts/extensions/third-party/st-memory-enhancement/'
-    ];
+    const context = SillyTavern.getContext();
+    console.log('[补丁] 酒馆核心已就绪');
 
-    for (const path of fallbackPaths) {
-        console.log('[补丁] 尝试回退路径:', path);
-        // 直接返回路径，让后续 import 去尝试加载
-        // 如果路径错误，import 会抛出异常，由上层 catch 处理
-        return path;
-    }
-
-    throw new Error('无法找到记忆表格插件路径');
-}
-
-async function applyPatch() {
-    console.log('[补丁] 等待记忆表格插件加载...');
+    // 等待记忆表格插件API暴露
     let attempts = 0;
     while (typeof window.stMemoryEnhancement === 'undefined') {
         if (attempts > 30) {
             console.error('[补丁] 记忆表格插件加载超时');
-            toastr.error('记忆表格插件加载超时，请刷新页面重试', '补丁加载');
+            toastr.error('记忆表格插件加载超时，请刷新页面', '补丁加载');
             return;
         }
         await new Promise(r => setTimeout(r, 300));
         attempts++;
     }
-    console.log('[补丁] 插件已加载，正在注入远程导入功能...');
+    console.log('[补丁] 记忆表格插件API已就绪');
 
-    let baseUrl;
-    try {
-        baseUrl = getPluginBaseUrl();
-        console.log('[补丁] 最终使用路径:', baseUrl);
-    } catch (err) {
-        console.error('[补丁] 路径探测失败:', err.message);
-        toastr.error('路径探测失败，请确认记忆表格插件已安装', '补丁加载');
+    // ---------- 智能路径探测 ----------
+    function extractBaseFromScript() {
+        const scripts = document.querySelectorAll('script[src]');
+        for (const script of scripts) {
+            const src = script.src;
+            if (src.includes('st-memory-enhancement') && /index\.js$/.test(src)) {
+                const base = src.substring(0, src.lastIndexOf('/') + 1);
+                console.log('[补丁] ✅ 从脚本标签提取路径:', base);
+                return base;
+            }
+        }
+        return null;
+    }
+
+    async function probePaths() {
+        const origin = window.location.origin;
+        // 按可能性排序的候选路径（相对根目录）
+        const candidates = [
+            '/data/default-user/extensions/st-memory-enhancement/',
+            '/extensions/st-memory-enhancement/',
+            '/public/scripts/extensions/third-party/st-memory-enhancement/',
+            '/scripts/extensions/third-party/st-memory-enhancement/',
+            '/plugins/st-memory-enhancement/'
+        ];
+
+        for (const relPath of candidates) {
+            const fullUrl = origin + relPath + 'index.js';
+            try {
+                const resp = await fetch(fullUrl, { method: 'HEAD' });
+                if (resp.ok) {
+                    console.log(`[补丁] ✅ 探测到有效路径: ${origin + relPath}`);
+                    return origin + relPath;
+                } else {
+                    console.log(`[补丁] 路径 ${relPath} 状态码: ${resp.status}`);
+                }
+            } catch (e) {
+                console.log(`[补丁] 路径 ${relPath} 请求失败:`, e.message);
+            }
+        }
+        return null;
+    }
+
+    let baseUrl = extractBaseFromScript();
+    if (!baseUrl) {
+        console.log('[补丁] 未从脚本提取到路径，开始探测...');
+        baseUrl = await probePaths();
+    }
+
+    if (!baseUrl) {
+        console.error('[补丁] 所有路径探测均失败');
+        toastr.error('找不到记忆表格插件路径，请确认已安装', '补丁加载');
         return;
     }
 
-    try {
-        // 测试路径是否有效
-        const testModule = await import(baseUrl + 'index.js');
-        console.log('[补丁] ✅ 路径验证成功，index.js 可加载');
+    console.log(`[补丁] 最终使用路径: ${baseUrl}`);
 
+    // ---------- 动态导入核心模块 ----------
+    try {
         const userExt = await import(baseUrl + 'scripts/settings/userExtensionSetting.js');
         const indexModule = await import(baseUrl + 'index.js');
 
@@ -80,6 +113,7 @@ async function applyPatch() {
             convertOldTablesToNewSheets
         } = indexModule;
 
+        // ---------- 注入远程导入函数 ----------
         window.stMemoryEnhancement.ext_importTablesFromUrl = async function(url) {
             try {
                 console.log(`[远程导入] 从 ${url} 获取预设...`);
@@ -91,6 +125,7 @@ async function applyPatch() {
                     throw new Error('预设数据格式无效');
                 }
 
+                // 纯表格数据
                 if (importedData.hash_sheets) {
                     const { piece: currentPiece } = USER.getChatPiece();
                     if (!currentPiece) throw new Error('无法获取当前聊天片段');
@@ -102,6 +137,7 @@ async function applyPatch() {
                     return { success: true };
                 }
 
+                // 旧表格数组
                 if (Array.isArray(importedData)) {
                     const { piece: currentPiece } = USER.getChatPiece();
                     if (!currentPiece) throw new Error('无法获取当前聊天片段');
@@ -112,6 +148,7 @@ async function applyPatch() {
                     return { success: true };
                 }
 
+                // 完整配置包（tableStructure）
                 if (importedData.tableStructure) {
                     for (let key in importedData) {
                         USER.tableBaseSetting[key] = importedData[key];
@@ -169,6 +206,7 @@ async function applyPatch() {
             }
         };
 
+        // 暴露辅助函数（可选）
         window.stMemoryEnhancement.updateSystemMessageTableStatus = updateSystemMessageTableStatus;
 
         console.log('✅ [补丁] 远程导入功能已成功注入！');
@@ -177,6 +215,4 @@ async function applyPatch() {
         console.error('[补丁] 注入失败:', err);
         toastr.error('远程导入补丁加载失败: ' + err.message, '补丁加载');
     }
-}
-
-applyPatch();
+})();
