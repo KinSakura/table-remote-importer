@@ -3,23 +3,34 @@
 // ============================================================
 
 function getPluginBaseUrl() {
+    // 1. 优先从已加载的脚本标签中查找
+    const scripts = document.querySelectorAll('script[src]');
+    for (const script of scripts) {
+        const src = script.src;
+        if (src.includes('st-memory-enhancement') && /\.js$/.test(src)) {
+            const match = src.match(/^(.*\/)[^/]+\.js/);
+            if (match) {
+                console.log('[补丁] ✅ 通过脚本标签找到插件路径:', match[1]);
+                return match[1];
+            }
+        }
+    }
+
+    // 2. 如果脚本标签找不到，回退到固定路径
     const origin = window.location.origin;
-    const paths = [
+    const fallbackPaths = [
         origin + '/data/default-user/extensions/st-memory-enhancement/',
         origin + '/public/scripts/extensions/third-party/st-memory-enhancement/'
     ];
-    for (const path of paths) {
-        try {
-            const xhr = new XMLHttpRequest();
-            xhr.open('HEAD', path + 'index.js', false);
-            xhr.send();
-            if (xhr.status === 200) {
-                console.log('[补丁] ✅ 找到插件路径:', path);
-                return path;
-            }
-        } catch (_) {}
+
+    for (const path of fallbackPaths) {
+        console.log('[补丁] 尝试回退路径:', path);
+        // 直接返回路径，让后续 import 去尝试加载
+        // 如果路径错误，import 会抛出异常，由上层 catch 处理
+        return path;
     }
-    throw new Error('未找到记忆表格插件，请确认已安装并启用');
+
+    throw new Error('无法找到记忆表格插件路径');
 }
 
 async function applyPatch() {
@@ -28,6 +39,7 @@ async function applyPatch() {
     while (typeof window.stMemoryEnhancement === 'undefined') {
         if (attempts > 30) {
             console.error('[补丁] 记忆表格插件加载超时');
+            toastr.error('记忆表格插件加载超时，请刷新页面重试', '补丁加载');
             return;
         }
         await new Promise(r => setTimeout(r, 300));
@@ -38,6 +50,7 @@ async function applyPatch() {
     let baseUrl;
     try {
         baseUrl = getPluginBaseUrl();
+        console.log('[补丁] 最终使用路径:', baseUrl);
     } catch (err) {
         console.error('[补丁] 路径探测失败:', err.message);
         toastr.error('路径探测失败，请确认记忆表格插件已安装', '补丁加载');
@@ -45,6 +58,10 @@ async function applyPatch() {
     }
 
     try {
+        // 测试路径是否有效
+        const testModule = await import(baseUrl + 'index.js');
+        console.log('[补丁] ✅ 路径验证成功，index.js 可加载');
+
         const userExt = await import(baseUrl + 'scripts/settings/userExtensionSetting.js');
         const indexModule = await import(baseUrl + 'index.js');
 
