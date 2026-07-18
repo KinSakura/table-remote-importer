@@ -4,6 +4,6 @@
     "requires": ["st-memory-enhancement"],
     "js": "index.js",
     "author": "厄言",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "为记忆表格插件添加远程导入预设功能，无需修改源文件"
 }

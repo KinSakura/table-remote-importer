@@ -7,14 +7,14 @@ console.log(`[${extensionName}] 扩展已加载`);
 
 const TABLE_PLUGIN_BASE = '/scripts/extensions/third-party/st-memory-enhancement/';
 
-const context = getContext();
-
 async function injectPatch() {
     try {
         const baseUrl = window.location.origin + TABLE_PLUGIN_BASE;
         console.log(`[${extensionName}] 使用路径:`, baseUrl);
 
+        // 从各自模块导入所需功能
         const userExt = await import(baseUrl + 'scripts/settings/userExtensionSetting.js');
+        const coreModule = await import(baseUrl + 'core/manager.js');
         const indexModule = await import(baseUrl + 'index.js');
 
         const {
@@ -24,13 +24,18 @@ async function injectPatch() {
             updateSystemMessageTableStatus
         } = userExt;
 
+        const { USER, BASE } = coreModule;
+
         const {
             updateSheetsView,
-            USER,
-            BASE,
             buildSheetsByTemplates,
             convertOldTablesToNewSheets
         } = indexModule;
+
+        // 检查关键对象是否可用
+        if (!USER || !BASE) {
+            throw new Error('导入核心对象 USER 或 BASE 失败');
+        }
 
         window.stMemoryEnhancement.ext_importTablesFromUrl = async function(url) {
             try {
