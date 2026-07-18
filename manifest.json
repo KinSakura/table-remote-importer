@@ -3,7 +3,9 @@
     "loading_order": 999,
     "requires": ["st-memory-enhancement"],
     "js": "patch.js",
-    "author": "你的名字",
-    "version": "1.0.0",
-    "description": "为记忆表格插件添加远程导入预设功能，无需修改源文件，自动适配插件安装路径。"
+    "author": "厄言",
+    "version": "1.0.1",
+    "description": "为记忆表格插件添加远程导入预设功能，无需修改源文件",
+    "homePage": "https://github.com/KinSakura/table-remote-importer",
+    "license": "MIT"
 }

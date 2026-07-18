@@ -1,28 +1,25 @@
 // ============================================================
-// 记忆表格远程导入补丁（自动适配路径）
+// 记忆表格远程导入补丁
 // ============================================================
 
 function getPluginBaseUrl() {
-    const scripts = document.querySelectorAll('script[src]');
-    for (const script of scripts) {
-        const src = script.src;
-        if (src.includes('st-memory-enhancement') && /(index|main)\.js/.test(src)) {
-            const match = src.match(/^(.*\/)(?:index|main)\.js/);
-            if (match) {
-                console.log('[补丁] 通过脚本标签找到插件路径:', match[1]);
-                return match[1];
-            }
-        }
-    }
     const origin = window.location.origin;
-    const candidates = [
-        origin + '/plugins/st-memory-enhancement/',
-        origin + '/extensions/st-memory-enhancement/',
-        origin + '/public/scripts/extensions/third-party/st-memory-enhancement/',
-        origin + '/data/default-user/extensions/st-memory-enhancement/'
+    const paths = [
+        origin + '/data/default-user/extensions/st-memory-enhancement/',
+        origin + '/public/scripts/extensions/third-party/st-memory-enhancement/'
     ];
-    console.warn('[补丁] 未通过脚本找到路径，使用候选路径:', candidates[0]);
-    return candidates[0];
+    for (const path of paths) {
+        try {
+            const xhr = new XMLHttpRequest();
+            xhr.open('HEAD', path + 'index.js', false);
+            xhr.send();
+            if (xhr.status === 200) {
+                console.log('[补丁] ✅ 找到插件路径:', path);
+                return path;
+            }
+        } catch (_) {}
+    }
+    throw new Error('未找到记忆表格插件，请确认已安装并启用');
 }
 
 async function applyPatch() {
@@ -38,7 +35,14 @@ async function applyPatch() {
     }
     console.log('[补丁] 插件已加载，正在注入远程导入功能...');
 
-    const baseUrl = getPluginBaseUrl();
+    let baseUrl;
+    try {
+        baseUrl = getPluginBaseUrl();
+    } catch (err) {
+        console.error('[补丁] 路径探测失败:', err.message);
+        toastr.error('路径探测失败，请确认记忆表格插件已安装', '补丁加载');
+        return;
+    }
 
     try {
         const userExt = await import(baseUrl + 'scripts/settings/userExtensionSetting.js');
