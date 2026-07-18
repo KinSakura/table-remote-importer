@@ -5,31 +5,13 @@ const extensionFolderPath = `scripts/extensions/third-party/${extensionName}`;
 
 console.log(`[${extensionName}] 扩展已加载`);
 
-const context = getContext();
+const TABLE_PLUGIN_BASE = '/scripts/extensions/third-party/st-memory-enhancement/';
 
-async function findTablePluginPath() {
-    const origin = window.location.origin;
-    const candidates = [
-        origin + '/public/scripts/extensions/third-party/st-memory-enhancement/',
-        origin + '/extensions/st-memory-enhancement/',
-        origin + '/data/default-user/extensions/st-memory-enhancement/',
-        origin + '/plugins/st-memory-enhancement/'
-    ];
-    for (const path of candidates) {
-        try {
-            const resp = await fetch(path + 'index.js', { method: 'HEAD' });
-            if (resp.ok) {
-                console.log(`[${extensionName}] 找到插件路径:`, path);
-                return path;
-            }
-        } catch (_) {}
-    }
-    throw new Error('找不到记忆表格插件路径');
-}
+const context = getContext();
 
 async function injectPatch() {
     try {
-        const baseUrl = await findTablePluginPath();
+        const baseUrl = window.location.origin + TABLE_PLUGIN_BASE;
         console.log(`[${extensionName}] 使用路径:`, baseUrl);
 
         const userExt = await import(baseUrl + 'scripts/settings/userExtensionSetting.js');
