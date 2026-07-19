@@ -252,7 +252,7 @@ A：推荐使用 Gitee 源：`https://gitee.com/victorgggg/table-remote-importer
 |------|------|
 | 补丁插件（GitHub） | https://github.com/KinSakura/table-remote-importer |
 | 补丁插件（Gitee） | https://gitee.com/victorgggg/table-remote-importer |
-| 记忆增强表格插件 | https://gitee.com/muyoou/st-memory-enhancement |
+| 记忆增强表格插件 | https://github.com/muyoou/st-memory-enhancement/ |
 | SillyTavern 官网 | https://sillytavern.app |
 
 ---
