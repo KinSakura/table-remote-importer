@@ -12,7 +12,6 @@ async function injectPatch() {
         const baseUrl = window.location.origin + TABLE_PLUGIN_BASE;
         console.log(`[${extensionName}] 使用路径:`, baseUrl);
 
-        // 从各自模块导入所需功能
         const userExt = await import(baseUrl + 'scripts/settings/userExtensionSetting.js');
         const coreModule = await import(baseUrl + 'core/manager.js');
         const indexModule = await import(baseUrl + 'index.js');
@@ -32,7 +31,6 @@ async function injectPatch() {
             convertOldTablesToNewSheets
         } = indexModule;
 
-        // 检查关键对象是否可用
         if (!USER || !BASE) {
             throw new Error('导入核心对象 USER 或 BASE 失败');
         }
@@ -128,8 +126,9 @@ async function injectPatch() {
 
         window.stMemoryEnhancement.updateSystemMessageTableStatus = updateSystemMessageTableStatus;
 
+        // 仅输出控制台日志，不再弹出成功提示
         console.log(`✅ [${extensionName}] 远程导入功能已成功注入！`);
-        toastr.success('记忆表格远程导入补丁已生效', '补丁加载');
+        // 移除了 toastr.success
     } catch (err) {
         console.error(`[${extensionName}] 注入失败:`, err);
         toastr.error('远程导入补丁加载失败: ' + err.message, '补丁加载');
