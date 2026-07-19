@@ -48,18 +48,6 @@
 
 ---
 
-## 🔧 验证安装
-
-刷新页面后，打开浏览器控制台（F12），输入：
-
-```javascript
-console.log(window.stMemoryEnhancement.ext_importTablesFromUrl)
-```
-
-如果输出`function` ，说明补丁安装成功 ✅
-
----
-
 ## 📖 使用方法
 
 ### API 说明
