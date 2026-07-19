@@ -3,7 +3,7 @@
 [![GitHub license](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![GitHub release](https://img.shields.io/badge/release-v1.0.0-brightgreen.svg)](https://github.com/KinSakura/table-remote-importer/releases)
 
-为 SillyTavern 的 **记忆增强表格插件** (`st-memory-enhancement`) 增加 **远程导入预设** 功能的补丁插件。  
+为 SillyTavern 的 **[记忆增强表格插件](https://gitee.com/muyoou/st-memory-enhancement)** 增加 **远程导入预设** 功能的补丁插件。  
 无需修改记忆表格插件源码，安装后即可通过一行代码从任意 URL 加载预设 JSON。
 
 ---
