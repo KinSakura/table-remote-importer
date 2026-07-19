@@ -56,7 +56,7 @@
 console.log(window.stMemoryEnhancement.ext_importTablesFromUrl)
 ```
 
-如果输出 `function`，说明补丁安装成功 ✅
+如果输出 `function` ，说明补丁安装成功 ✅
 
 ---
 
